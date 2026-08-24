@@ -1,5 +1,5 @@
 
-export type Role = 'admin' | 'teacher' | 'assistant' | 'viewer' | 'student_officer';
+export type Role = 'admin' | 'teacher' | 'assistant' | 'student' | 'student_officer';
 
 export type PermissionKey =
   | 'manageStudents'
