@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 // Lấy từ Supabase Dashboard > Project Settings > API.
 // anon key là public key phía client, không phải secret — an toàn khi đưa vào
 // biến môi trường build-time của Vite (VITE_*).
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-project-id.supabase.co') as string;
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAwMDAwMDAsImV4cCI6MjA1NTU2MDAwMH0.placeholder-signature') as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // eslint-disable-next-line no-console
@@ -18,6 +18,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    lock: async (_name, _acquireTimeout, fn) => fn()
   }
 });
