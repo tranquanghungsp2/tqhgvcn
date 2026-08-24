@@ -1,0 +1,24 @@
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Heart, Leaf, Plus, Trash2 } from 'lucide-react';
+import { EmptyClass } from '../components/EmptyClass';
+import { PageHeader } from '../components/PageHeader';
+import { useAuth } from '../context/AuthContext';
+import { useClassRoom } from '../context/ClassContext';
+import { todayISO } from '../services/dateUtils';
+import { addGoodDeed, cancelGoodDeed, countGoodDeedsByStudent, listGoodDeeds } from '../services/goodDeedService';
+import { listStudentDirectory } from '../services/studentService';
+import type { GoodDeedRecord, PublicStudent } from '../types';
+
+export function GoodDeedsPage() {
+  const { currentClassId } = useClassRoom(); const { profile, can } = useAuth();
+  const canEdit = profile?.role === 'admin' || profile?.role === 'teacher' || profile?.role === 'assistant' || can('manageClassContent');
+  const [students, setStudents] = useState<PublicStudent[]>([]); const [records, setRecords] = useState<GoodDeedRecord[]>([]); const [studentId, setStudentId] = useState(''); const [content, setContent] = useState(''); const [date, setDate] = useState(todayISO()); const [leafValue, setLeafValue] = useState(1); const [showForm, setShowForm] = useState(false); const [busy, setBusy] = useState(false);
+  async function reload() { if (!currentClassId) return; const [s, r] = await Promise.all([listStudentDirectory(currentClassId), listGoodDeeds(currentClassId, 300)]); setStudents(s); setRecords(r); }
+  useEffect(() => { void reload(); }, [currentClassId]);
+  const selected = students.find((s) => s.id === studentId); const counts = useMemo(() => countGoodDeedsByStudent(records), [records]); const leaders = useMemo(() => [...students].sort((a,b) => (counts[b.id] || 0) - (counts[a.id] || 0)).slice(0,5), [students, counts]);
+  async function submit(e: FormEvent) { e.preventDefault(); if (!currentClassId || !profile || !selected || !content.trim()) return; setBusy(true); try { await addGoodDeed({ classId: currentClassId, studentId: selected.id, studentName: selected.fullName, content, date, leafValue, creatorUid: profile.uid, creatorName: profile.displayName }); setContent(''); setStudentId(''); setShowForm(false); await reload(); } finally { setBusy(false); } }
+  if (!currentClassId) return <EmptyClass />;
+  return <><PageHeader title="Việc tốt mỗi ngày" description="Mỗi lời nói tử tế là một hạt giống tốt. Ghi nhận hành động đẹp và cùng vun khu vườn yêu thương." actions={canEdit ? <button className="btn primary" onClick={() => setShowForm((v) => !v)}><Plus size={16} />Ghi nhận việc tốt</button> : undefined} />
+  {showForm && canEdit && <form className="card form-card" onSubmit={submit}><div className="form-grid cols-3"><label>Học sinh<select required value={studentId} onChange={(e) => setStudentId(e.target.value)}><option value="">-- Chọn học sinh --</option>{students.map((s) => <option key={s.id} value={s.id}>{s.fullName}</option>)}</select></label><label>Ngày<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label><label>Số lá<input type="number" min="1" max="5" value={leafValue} onChange={(e) => setLeafValue(Number(e.target.value))} /></label><label className="span-2">Việc tốt<textarea required value={content} onChange={(e) => setContent(e.target.value)} placeholder="Ví dụ: Chủ động giúp bạn hoàn thành phần trực nhật..." /></label></div><div className="row-actions end"><button type="button" className="btn ghost" onClick={() => setShowForm(false)}>Hủy</button><button className="btn primary" disabled={busy}>Gieo chiếc lá</button></div></form>}
+  <div className="good-deeds-layout"><section className="card"><div className="card-head"><div><h3>Nhật ký việc tốt</h3><p>{records.length} câu chuyện đẹp đã được ghi nhận.</p></div></div><div className="deed-timeline">{records.slice(0,50).map((item) => <div className="deed-row" key={item.id}><div className="deed-leaf">🌿</div><div><strong>{item.studentName}</strong><p>{item.content}</p><small>{item.date} • +{item.leafValue} lá • {item.creatorName}</small></div>{canEdit && <button className="plain-icon danger-text" onClick={async () => { if (!confirm('Hủy ghi nhận việc tốt này?')) return; await cancelGoodDeed(currentClassId, item.id); await reload(); }}><Trash2 size={14} /></button>}</div>)}{records.length === 0 && <div className="empty-inline">Chưa có việc tốt nào được ghi nhận.</div>}</div></section><aside className="soft-panel deed-leaders"><div className="garden-panel-title"><Heart size={18} /> VƯỜN YÊU THƯƠNG</div>{leaders.map((student, index) => <div className="deed-leader" key={student.id}><b>#{index + 1}</b><span className="mini-avatar">{student.fullName.slice(0,1)}</span><div><strong>{student.fullName}</strong><small>{student.groupName || 'Thành viên lớp'}</small></div><em><Leaf size={13} />{counts[student.id] || 0}</em></div>)}{leaders.length === 0 && <div className="empty-soft">Chưa có dữ liệu.</div>}</aside></div></>;
+}

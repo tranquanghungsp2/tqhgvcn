@@ -1,0 +1,121 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren
+} from 'react';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '../supabase/config';
+import type { AppUser, PermissionKey } from '../types';
+import { loadProfile, loginWithGoogle, logout } from '../services/authService';
+
+interface AuthContextValue {
+  authUser: User | null;
+  profile: AppUser | null;
+  loading: boolean;
+  error: string | null;
+  signIn: () => Promise<void>;
+  signOutUser: () => Promise<void>;
+  can: (permission: PermissionKey) => boolean;
+  refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: PropsWithChildren) {
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshProfile = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    if (!user) return;
+    try {
+      const next = await loadProfile(user.id);
+      setProfile(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải hồ sơ.');
+    }
+  }, []);
+
+  useEffect(() => {
+    let profileChannel: ReturnType<typeof supabase.channel> | undefined;
+    let classChannel: ReturnType<typeof supabase.channel> | undefined;
+
+    async function bindRealtime(userId: string) {
+      profileChannel?.unsubscribe();
+      classChannel?.unsubscribe();
+
+      profileChannel = supabase
+        .channel(`profile-${userId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, () => {
+          void refreshProfile();
+        })
+        .subscribe();
+
+      classChannel = supabase
+        .channel(`user-classes-${userId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'user_classes', filter: `user_id=eq.${userId}` }, () => {
+          void refreshProfile();
+        })
+        .subscribe();
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user ?? null;
+      setAuthUser(user);
+      setError(null);
+
+      if (!user) {
+        setProfile(null);
+        profileChannel?.unsubscribe();
+        classChannel?.unsubscribe();
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const next = await loadProfile(user.id);
+        setProfile(next);
+        await bindRealtime(user.id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Không thể tải tài khoản.');
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+      profileChannel?.unsubscribe();
+      classChannel?.unsubscribe();
+    };
+  }, [refreshProfile]);
+
+  const value = useMemo<AuthContextValue>(() => ({
+    authUser,
+    profile,
+    loading,
+    error,
+    signIn: loginWithGoogle,
+    signOutUser: logout,
+    can: (permission) => Boolean(
+      profile?.isApproved && profile?.isActive &&
+      (profile.role === 'admin' || profile.permissions?.[permission])
+    ),
+    refreshProfile
+  }), [authUser, profile, loading, error, refreshProfile]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const value = useContext(AuthContext);
+  if (!value) throw new Error('useAuth phải được dùng bên trong AuthProvider.');
+  return value;
+}
