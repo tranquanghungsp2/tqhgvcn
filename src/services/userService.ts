@@ -65,7 +65,9 @@ export async function updateUserAccess(
   const { classIds, ...profileValues } = values;
 
   if (Object.keys(profileValues).length > 0) {
-    const payload = objToSnake(profileValues as unknown as Record<string, unknown>);
+    const sanitized: Record<string, unknown> = { ...profileValues };
+    if (sanitized.linkedStudentId === '') sanitized.linkedStudentId = null;
+    const payload = objToSnake(sanitized);
     const { error } = await supabase.from('profiles').update(payload).eq('id', uid);
     if (error) throw error;
   }
