@@ -3,12 +3,22 @@
 // không đệ quy vào bên trong object/array (vd. cột permissions là jsonb có
 // sẵn key camelCase như "manageStudents", KHÔNG được đổi thành "manage_students").
 
+// Các từ viết tắt cần giữ nguyên viết hoa khi đổi snake_case -> camelCase
+// (vd. "avatar_url" phải thành "avatarURL", không phải "avatarUrl", để khớp
+// đúng tên field khai báo trong src/types/index.ts).
+const ACRONYMS = new Set(['url']);
+
 function snakeToCamel(key: string): string {
-  return key.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+  return key.replace(/_([a-z0-9]+)/g, (_, word: string) =>
+    ACRONYMS.has(word) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1)
+  );
 }
 
 function camelToSnake(key: string): string {
-  return key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .toLowerCase();
 }
 
 export function rowToCamel<T = Record<string, unknown>>(row: Record<string, unknown> | null | undefined): T {
