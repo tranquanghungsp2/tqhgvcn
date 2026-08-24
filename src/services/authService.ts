@@ -32,3 +32,9 @@ export async function loadProfile(userId: string): Promise<AppUser | null> {
   const classIds = (classRows || []).map((row) => row.class_id as string);
   return mapProfileRow(profileRow, classIds);
 }
+
+export async function loginWithStudentCode(studentCode: string, password: string): Promise<void> {
+  const email = `${studentCode.trim().toLowerCase()}@hocsinh.local`;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error('Sai Mã học sinh hoặc mật khẩu.');
+}
