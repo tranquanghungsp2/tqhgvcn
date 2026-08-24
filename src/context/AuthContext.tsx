@@ -12,6 +12,16 @@ import { supabase } from '../supabase/config';
 import type { AppUser, PermissionKey } from '../types';
 import { loadProfile, loginWithGoogle, logout } from '../services/authService';
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+}
+
 interface AuthContextValue {
   authUser: User | null;
   profile: AppUser | null;
@@ -36,7 +46,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const user = data.user;
     if (!user) return;
     try {
-      const next = await loadProfile(user.id);
+      const next = await withTimeout(loadProfile(user.id), 12000, 'Tải hồ sơ quá lâu, vui lòng thử lại.');
       setProfile(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tải hồ sơ.');
@@ -80,7 +90,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       try {
-        const next = await loadProfile(user.id);
+        const next = await withTimeout(loadProfile(user.id), 12000, 'Tải tài khoản quá lâu — có thể do mạng chập chờn hoặc trình duyệt còn giữ phiên từ tab cũ. Hãy đóng hết các tab khác của trang này rồi thử lại.');
         setProfile(next);
         await bindRealtime(user.id);
       } catch (err) {
