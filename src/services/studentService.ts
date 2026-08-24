@@ -131,3 +131,12 @@ export async function createLegacyStudentOnly(classId: string, input: StudentCre
 export async function syncStudentDirectory(_classId: string): Promise<number> {
   return 0;
 }
+
+export async function createStudentLogin(studentId: string, password: string): Promise<string> {
+  const { data, error } = await supabase.rpc('create_student_login', {
+    p_student_id: studentId,
+    p_password: password
+  });
+  if (error) throw error;
+  return data as string;
+}
