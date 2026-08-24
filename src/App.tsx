@@ -31,10 +31,20 @@ function LoadingScreen() {
   return <div className="loading-screen"><div className="spinner" /><p>Đang tải hệ thống...</p></div>;
 }
 
+function ErrorScreen({ message }: { message: string }) {
+  return (
+    <div className="loading-screen">
+      <p style={{ maxWidth: 420, textAlign: 'center', marginBottom: 16 }}>{message}</p>
+      <button className="btn primary" onClick={() => window.location.reload()}>Thử lại</button>
+    </div>
+  );
+}
+
 export default function App() {
-  const { authUser, profile, loading, can } = useAuth();
+  const { authUser, profile, loading, error, can } = useAuth();
 
   if (loading) return <LoadingScreen />;
+  if (error && !profile) return <ErrorScreen message={error} />;
   if (!authUser) return <LoginPage />;
   if (!profile || !profile.isApproved || !profile.isActive) return <PendingPage />;
 
