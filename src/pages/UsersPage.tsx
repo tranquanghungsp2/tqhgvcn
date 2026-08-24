@@ -27,13 +27,13 @@ function roleLabel(role: Role) {
   if (role === 'admin') return 'Admin';
   if (role === 'teacher') return 'Giáo viên';
   if (role === 'assistant') return 'Trợ giảng';
-  if (role === 'viewer') return 'Chỉ xem';
+  if (role === 'student') return 'Học sinh';
   return 'Cán bộ lớp';
 }
 
 function defaultPermissions(role: Role): Permissions {
   if (role === 'teacher' || role === 'assistant') return { ...TEACHER_PERMISSIONS };
-  if (role === 'viewer') return { ...EMPTY_PERMISSIONS, viewReports: true };
+  if (role === 'student') return { ...EMPTY_PERMISSIONS, viewReports: true };
   if (role === 'student_officer') return { ...OFFICER_PERMISSIONS };
   return { ...TEACHER_PERMISSIONS };
 }
@@ -257,7 +257,7 @@ export function UsersPage() {
           <option value="admin">Admin</option>
           <option value="teacher">Giáo viên</option>
           <option value="assistant">Trợ giảng</option>
-          <option value="viewer">Chỉ xem</option>
+          <option value="student">Học sinh</option>
           <option value="student_officer">Cán bộ lớp</option>
         </select></label>
         <label>Phê duyệt<select value={editing.isApproved ? 'yes' : 'no'} onChange={(e) => setEditing((c) => c ? { ...c, isApproved: e.target.value === 'yes' } : c)} disabled={editing.uid === profile?.uid}>
@@ -305,7 +305,7 @@ export function UsersPage() {
         <label>Vai trò<select value={role} onChange={(e) => changeRole(e.target.value as Role)}>
           <option value="teacher">Giáo viên</option>
           <option value="assistant">Trợ giảng</option>
-          <option value="viewer">Chỉ xem</option>
+          <option value="student">Học sinh</option>
           <option value="student_officer">Cán bộ lớp</option>
         </select></label>
       </div>
