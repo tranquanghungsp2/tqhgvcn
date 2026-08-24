@@ -10,7 +10,7 @@ import {
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../supabase/config';
 import type { AppUser, PermissionKey } from '../types';
-import { loadProfile, loginWithGoogle, logout } from '../services/authService';
+import { loadProfile, loginWithGoogle, loginWithStudentCode, logout } from '../services/authService';
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -28,6 +28,7 @@ interface AuthContextValue {
   loading: boolean;
   error: string | null;
   signIn: () => Promise<void>;
+  signInAsStudent: (studentCode: string, password: string) => Promise<void>;
   signOutUser: () => Promise<void>;
   can: (permission: PermissionKey) => boolean;
   refreshProfile: () => Promise<void>;
@@ -113,6 +114,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     loading,
     error,
     signIn: loginWithGoogle,
+    signInAsStudent: loginWithStudentCode,
     signOutUser: logout,
     can: (permission) => Boolean(
       profile?.isApproved && profile?.isActive &&
