@@ -167,6 +167,7 @@ export function UsersPage() {
       isActive: user.isActive
     });
     setMessage('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function editRole(next: Role) {
