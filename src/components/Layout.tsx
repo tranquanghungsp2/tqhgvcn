@@ -98,7 +98,7 @@ function roleLabel(role?: Role) {
   if (role === 'admin') return 'Quản trị viên';
   if (role === 'teacher') return 'Giáo viên';
   if (role === 'assistant') return 'Trợ giảng';
-  if (role === 'viewer') return 'Chỉ xem';
+  if (role === 'student') return 'Học sinh';
   if (role === 'student_officer') return 'Cán bộ lớp';
   return '';
 }
